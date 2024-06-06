@@ -1,0 +1,62 @@
+.modal-header {
+  background-color: #007bff;
+  color: white;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+button.close {
+  color: white;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Nuevos estilos para la tabla */
+.table thead th {
+  background-color: #007bff; /* Color azul para los encabezados */
+  color: white;
+}
+
+.table tbody tr:nth-child(odd) td {
+  background-color: #f2f2f2; /* Color de fondo para filas impares */
+}
+
+.table tbody tr:nth-child(even) td {
+  background-color:  white; /* Color de fondo para filas pares */
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  list-style: none;
+  padding: 0;
+}
+
+.pagination li {
+  margin: 0 5px;
+}
+
+.pagination li a {
+  color: #007bff;
+  cursor: pointer;
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.pagination li a:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+.pagination li.selected a {
+  background-color: #007bff;
+  color: white;
+}

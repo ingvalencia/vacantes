@@ -3,6 +3,7 @@ import Swal from 'sweetalert2';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './Vacantes.css';
 import ReactPaginate from 'react-paginate';
+import Select from 'react-select';
 import ReactHTMLTableToExcel from 'react-html-table-to-excel';
 import { FaFileExcel } from 'react-icons/fa';
 
@@ -11,6 +12,7 @@ function Vacantes() {
     const [filteredVacantes, setFilteredVacantes] = useState([]);
     const [areas, setAreas] = useState([]);
     const [estatus, setEstatus] = useState([]);
+    const [tipo, setTipo] = useState([]);
     const [analistas, setAnalistas] = useState([]);
     const [comentarios, setComentarios] = useState('');
     const [comentariosFijos, setComentariosFijos] = useState('');
@@ -20,6 +22,13 @@ function Vacantes() {
     const [analistaNombre, setAnalistaNombre] = useState('');
     const [sueldo, setSueldo] = useState('');
     const [estatusId, setEstatusId] = useState('');
+    const [tipoId, setTipoId] = useState('');
+    const [jefes, setJefes] = useState([]);
+    const [jefeId, setJefesId] = useState('');
+    const [jefeNombre, setJefeNombre] = useState('');
+    const [fechaRequisicion, setFechaRequisicion] = useState('');
+    const [fechaSeleccion, setFechaSeleccion] = useState(''); // Nuevo estado para la fecha de requisición
+    const [fechaIngreso, setFechaIngreso] = useState('');
     const [error, setError] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -49,6 +58,7 @@ function Vacantes() {
 
     useEffect(() => {
         const quer = getQueryVariable('id');
+        //const quer = '66638a0207a53';
         console.log("Query variable 'id':", quer); // Depuración
         if (quer !== false) {
             usuario_con(quer);
@@ -126,7 +136,9 @@ function Vacantes() {
                     setVacantes(data.vacantes);
                     setAreas(data.areas);
                     setEstatus(data.estatus);
+                    setTipo(data.tipo);
                     setAnalistas(data.analistas);
+                    setJefes(data.jefes);
                 }
             })
             .catch(error => {
@@ -149,6 +161,15 @@ function Vacantes() {
         }
     }, [analistas, noempl]);
 
+    useEffect(() => {
+        const selectedJefe = jefes.find(jefe => jefe.id === jefeId);
+        if (selectedJefe) {
+            setJefeNombre(selectedJefe.nombre_completo);
+        } else {
+            setJefeNombre('');
+        }
+    }, [jefeId, jefes]);
+    
     useEffect(() => {
         if (noempl && vacantes.length > 0) {
             if (shouldFilter) {
@@ -178,6 +199,8 @@ function Vacantes() {
                 vacante.nom_area.toLowerCase().includes(term.toLowerCase()) ||
                 vacante.analista.toLowerCase().includes(term.toLowerCase()) ||
                 vacante.nom_estatus.toLowerCase().includes(term.toLowerCase()) ||
+                vacante.nom_tipo.toLowerCase().includes(term.toLowerCase()) ||
+                vacante.nom_jefe_directo.toLowerCase().includes(term.toLowerCase()) ||
                 vacante.comentario.toLowerCase().includes(term.toLowerCase()))
             );
             setFilteredVacantes(filtered);
@@ -247,6 +270,12 @@ function Vacantes() {
         setAnalistaNombre('');
         setSueldo('');
         setEstatusId('');
+        setTipoId('');
+        setJefesId('');
+        setJefeNombre('');
+        setFechaRequisicion(''); // Resetear fecha de requisición
+        setFechaSeleccion('');
+        setFechaIngreso('');
         setComentarios('');
         setComentariosFijos('');
     };
@@ -254,13 +283,18 @@ function Vacantes() {
     const handleSubmit = (event) => {
         event.preventDefault();
 
-        if (!vacanteId || !areaId || !analistaId || !sueldo || !estatusId || !comentarios) {
+        if (!vacanteId || !areaId || !analistaId || !sueldo || !estatusId || !tipoId || !jefeId || !fechaRequisicion || !fechaIngreso || !fechaSeleccion || !comentarios) {
             let missingFields = [];
             if (!vacanteId) missingFields.push('Vacante');
             if (!areaId) missingFields.push('CEF/Área');
             if (!analistaId) missingFields.push('Analista');
             if (!sueldo) missingFields.push('Sueldo');
             if (!estatusId) missingFields.push('Estatus');
+            if (!tipoId) missingFields.push('Tipo');
+            if (!jefeId) missingFields.push('Jefe Directo');
+            if (!fechaRequisicion) missingFields.push('Fecha de Requisición');
+            if (!fechaSeleccion) missingFields.push('Fecha de Selección');
+            if (!fechaIngreso) missingFields.push('Fecha de Ingreso');
             if (!comentarios) missingFields.push('Comentarios');
 
             Swal.fire({
@@ -278,6 +312,11 @@ function Vacantes() {
             noempl: noempl,
             sueldo: sueldo.replace(/,/g, ''),
             estatus_id: estatusId,
+            tipo_id: tipoId,
+            jefe: jefeNombre,
+            fecha_requisicion: fechaRequisicion, // Añadir fecha de requisición al objeto de datos
+            fecha_seleccion: fechaSeleccion,
+            fecha_ingreso: fechaIngreso,
             comentario: comentarios,
         };
 
@@ -326,6 +365,12 @@ function Vacantes() {
         setAnalistaNombre(vacante.analista);
         setSueldo(vacante.sueldo);
         setEstatusId(vacante.estatus_id);
+        setTipoId(vacante.tipo_id);
+        setJefesId(vacante.jefe_id);
+        setJefeNombre(vacante.nom_jefe_directo);
+        setFechaRequisicion(vacante.fecha_requisicion); // Añadir fecha de requisición al formulario de edición
+        setFechaSeleccion(vacante.fecha_seleccion);
+        setFechaIngreso(vacante.fecha_ingreso);
         setComentarios(vacante.comentario);
         setComentariosFijos(vacante.comentario); // Set the fixed part of the comment
         setShowEditModal(true);
@@ -334,12 +379,17 @@ function Vacantes() {
     const handleEditSubmit = (event) => {
         event.preventDefault();
 
-        if (!vacanteId || !areaId || !sueldo || !estatusId || !comentarios) {
+        if (!vacanteId || !areaId || !sueldo || !estatusId || !tipoId || !jefeId || !fechaRequisicion || !fechaSeleccion || !fechaIngreso || !comentarios) {
             let missingFields = [];
             if (!vacanteId) missingFields.push('Vacante');
             if (!areaId) missingFields.push('CEF/Área');
             if (!sueldo) missingFields.push('Sueldo');
             if (!estatusId) missingFields.push('Estatus');
+            if (!tipoId) missingFields.push('Tipo');
+            if (!jefeId) missingFields.push('Jefe Directo');
+            if (!fechaRequisicion) missingFields.push('Fecha de Requisición');
+            if (!fechaSeleccion) missingFields.push('Fecha de Selección');
+            if (!fechaIngreso) missingFields.push('Fecha de Ingreso');
             if (!comentarios) missingFields.push('Comentarios');
 
             Swal.fire({
@@ -358,6 +408,11 @@ function Vacantes() {
             noempl: noempl,
             sueldo: sueldo.replace(/,/g, ''),
             estatus_id: estatusId,
+            tipo_id: tipoId,
+            jefe: jefeNombre,
+            fecha_requisicion: fechaRequisicion, // Añadir fecha de requisición al objeto de datos
+            fecha_seleccion: fechaSeleccion,
+            fecha_ingreso: fechaIngreso,
             comentario: comentarios,
         };
 
@@ -434,6 +489,16 @@ function Vacantes() {
     const currentPageData = filteredVacantes.slice(offset, offset + itemsPerPage); // Usar las vacantes filtradas
     const pageCount = Math.ceil(filteredVacantes.length / itemsPerPage); // Usar las vacantes filtradas
 
+    //Buscador rapido
+    const handleJefeChange = (selectedOption) => {
+        setJefesId(selectedOption ? selectedOption.value : '');
+    };
+
+    const jefeOptions = jefes.map(jefe => ({
+        value: jefe.id,
+        label: jefe.nombre_completo,
+    }));
+
     return (
         <div>
             <br></br>
@@ -498,6 +563,11 @@ function Vacantes() {
                                 <th>Área</th>
                                 <th>Analista</th>
                                 <th>Sueldo</th>
+                                <th>Jefe Directo</th>
+                                <th>Tipo</th>
+                                <th>Fecha de Requisición</th>
+                                <th>Fecha de Selección</th>
+                                <th>Fecha de Ingreso</th>
                                 <th>Estatus</th>
                                 <th>Comentario</th>
                                 <th>Fecha de Registro</th>
@@ -512,6 +582,11 @@ function Vacantes() {
                                     <td>{vacante.nom_area}</td>
                                     <td>{vacante.analista}</td>
                                     <td>{vacante.sueldo}</td>
+                                    <td>{vacante.nom_jefe_directo}</td>
+                                    <td>{vacante.nom_tipo}</td>
+                                    <td>{vacante.fecha_requisicion}</td>
+                                    <td>{vacante.fecha_seleccion}</td>
+                                    <td>{vacante.fecha_ingreso}</td>
                                     <td>{vacante.nom_estatus}</td>
                                     <td>{vacante.comentario}</td>
                                     <td>{vacante.fecha_registro}</td>
@@ -537,7 +612,7 @@ function Vacantes() {
 
             {showModal && (
                 <div className="modal fade show" tabIndex="-1" role="dialog" aria-labelledby="vacanteModalLabel" aria-hidden="true" style={{ display: 'block' }}>
-                    <div className="modal-dialog" role="document">
+                    <div className="modal-dialog modal-lg" role="document">
                         <div className="modal-content">
                             <div className="modal-header modal-header-blue">
                                 <h5 className="modal-title" id="vacanteModalLabel">Añadir Nueva Vacante</h5>
@@ -556,42 +631,98 @@ function Vacantes() {
                                             ))}
                                         </select>
                                     </div>
-                                    <div className="form-group">
-                                        <label htmlFor="cefa">CEF/Área</label>
-                                        <select className="form-control" id="cefa" value={areaId} onChange={(e) => setAreaId(e.target.value)}>
-                                            <option value="">Seleccione...</option>
-                                            {areas.map(area => (
-                                                <option key={area.id} value={area.id}>{area.nombre}</option>
-                                            ))}
-                                        </select>
+                                    <div className="form-row">
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="cefa">CEF/Área</label>
+                                            <select className="form-control" id="cefa" value={areaId} onChange={(e) => setAreaId(e.target.value)}>
+                                                <option value="">Seleccione...</option>
+                                                {areas.map(area => (
+                                                    <option key={area.id} value={area.id}>{area.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="analista">Analista</label>
+                                            <select className="form-control" id="analista" value={analistaId} onChange={handleAnalistaChange}>
+                                                <option value="">Seleccione...</option>
+                                                {analistas.map(analista => (
+                                                    <option key={analista.id} value={analista.id}>{analista.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="form-row">
+                                        <div className="form-group col-md-4">
+                                            <label htmlFor="sueldo">Sueldo</label>
+                                            <input 
+                                                type="text" 
+                                                className="form-control" 
+                                                id="sueldo" 
+                                                value={sueldo} 
+                                                onChange={(e) => setSueldo(e.target.value)} 
+                                            />
+                                        </div>
+                                        <div className="form-group col-md-4">
+                                            <label htmlFor="estatus">Estatus</label>
+                                            <select className="form-control" id="estatus" value={estatusId} onChange={(e) => setEstatusId(e.target.value)}>
+                                                <option value="">Seleccione...</option>
+                                                {estatus.map(status => (
+                                                    <option key={status.id} value={status.id}>{status.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-group col-md-4">
+                                            <label htmlFor="tipo">Tipo</label>
+                                            <select className="form-control" id="tipo" value={tipoId} onChange={(e) => setTipoId(e.target.value)}>
+                                                <option value="">Seleccione...</option>
+                                                {tipo.map(tipo => (
+                                                    <option key={tipo.id} value={tipo.id}>{tipo.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
                                     <div className="form-group">
-                                        <label htmlFor="analista">Analista</label>
-                                        <select className="form-control" id="analista" value={analistaId} onChange={handleAnalistaChange} disabled>
-                                            <option value="">Seleccione...</option>
-                                            {analistas.map(analista => (
-                                                <option key={analista.id} value={analista.id}>{analista.nombre}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label htmlFor="sueldo">Sueldo</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-control" 
-                                            id="sueldo" 
-                                            value={sueldo} 
-                                            onChange={(e) => setSueldo(e.target.value)} 
+                                        <label htmlFor="jefe">Jefe Directo</label>
+                                        <Select
+                                            id="jefe"
+                                            options={jefeOptions}
+                                            value={jefeOptions.find(option => option.value === jefeId)}
+                                            onChange={handleJefeChange}
+                                            isClearable
+                                            placeholder="Seleccione..."
                                         />
                                     </div>
-                                    <div className="form-group">
-                                        <label htmlFor="estatus">Estatus</label>
-                                        <select className="form-control" id="estatus" value={estatusId} onChange={(e) => setEstatusId(e.target.value)}>
-                                            <option value="">Seleccione...</option>
-                                            {estatus.map(status => (
-                                                <option key={status.id} value={status.id}>{status.nombre}</option>
-                                            ))}
-                                        </select>
+                                    <div className="form-row">
+                                        <div className="form-group col-md-4">
+                                            <label htmlFor="fechaRequisicion">Fecha de Requisición</label>
+                                            <input 
+                                                type="date" 
+                                                className="form-control" 
+                                                id="fechaRequisicion" 
+                                                value={fechaRequisicion} 
+                                                onChange={(e) => setFechaRequisicion(e.target.value)} 
+                                            />
+                                        </div>
+                                        <div className="form-group col-md-4">
+                                            <label htmlFor="fechaSeleccion">Fecha de Selección</label>
+                                            <input 
+                                                type="date" 
+                                                className="form-control" 
+                                                id="fechaSeleccion" 
+                                                value={fechaSeleccion} 
+                                                onChange={(e) => setFechaSeleccion(e.target.value)} 
+                                            />
+                                        </div>
+                                        <div className="form-group col-md-4">
+                                            <label htmlFor="fechaIngreso">Fecha de Ingreso</label>
+                                            <input 
+                                                type="date" 
+                                                className="form-control" 
+                                                id="fechaIngreso" 
+                                                value={fechaIngreso} 
+                                                onChange={(e) => setFechaIngreso(e.target.value)} 
+                                            />
+                                        </div>
                                     </div>
                                     <div className="form-group">
                                         <label htmlFor="comentarios">Comentarios</label>
@@ -617,7 +748,7 @@ function Vacantes() {
 
             {showEditModal && selectedVacante && (
                 <div className="modal fade show" tabIndex="-1" role="dialog" aria-labelledby="editVacanteModalLabel" aria-hidden="true" style={{ display: 'block' }}>
-                    <div className="modal-dialog" role="document">
+                    <div className="modal-dialog modal-lg" role="document">
                         <div className="modal-content">
                             <div className="modal-header modal-header-blue">
                                 <h5 className="modal-title" id="editVacanteModalLabel">Editar Vacante</h5>
@@ -636,37 +767,94 @@ function Vacantes() {
                                             ))}
                                         </select>
                                     </div>
-                                    <div className="form-group">
-                                        <label htmlFor="editCefa">CEF/Área</label>
-                                        <select className="form-control" id="editCefa" value={areaId} onChange={(e) => setAreaId(e.target.value)}>
-                                            <option value="">Seleccione...</option>
-                                            {areas.map(area => (
-                                                <option key={area.id} value={area.id}>{area.nombre}</option>
-                                            ))}
-                                        </select>
+                                    <div className="form-row">
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="editCefa">CEF/Área</label>
+                                            <select className="form-control" id="editCefa" value={areaId} onChange={(e) => setAreaId(e.target.value)}>
+                                                <option value="">Seleccione...</option>
+                                                {areas.map(area => (
+                                                    <option key={area.id} value={area.id}>{area.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="editAnalista">Analista</label>
+                                            <input type="text" className="form-control" id="editAnalista" value={selectedVacante.analista} disabled />
+                                        </div>
                                     </div>
-                                    <div className="form-group">
-                                        <label htmlFor="editAnalista">Analista</label>
-                                        <input type="text" className="form-control" id="editAnalista" value={selectedVacante.analista} disabled />
+                                    <div className="form-row">
+                                        <div className="form-group col-md-4">
+                                            <label htmlFor="editSueldo">Sueldo</label>
+                                            <input 
+                                                type="text" 
+                                                className="form-control" 
+                                                id="editSueldo" 
+                                                value={sueldo} 
+                                                onChange={(e) => setSueldo(e.target.value)} 
+                                            />
+                                        </div>
+                                        <div className="form-group col-md-4">
+                                            <label htmlFor="editEstatus">Estatus</label>
+                                            <select className="form-control" id="editEstatus" value={estatusId} onChange={(e) => setEstatusId(e.target.value)}>
+                                                <option value="">Seleccione...</option>
+                                                {estatus.map(status => (
+                                                    <option key={status.id} value={status.id}>{status.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-group col-md-4">
+                                            <label htmlFor="editTipo">Tipo</label>
+                                            <select className="form-control" id="editTipo" value={tipoId} onChange={(e) => setTipoId(e.target.value)}>
+                                                <option value="">Seleccione...</option>
+                                                {tipo.map(tipo => (
+                                                    <option key={tipo.id} value={tipo.id}>{tipo.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
+                                    
                                     <div className="form-group">
-                                        <label htmlFor="editSueldo">Sueldo</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-control" 
-                                            id="editSueldo" 
-                                            value={sueldo} 
-                                            onChange={(e) => setSueldo(e.target.value)} 
+                                        <label htmlFor="editJefe">Jefe Directo</label>
+                                        <Select
+                                            id="editJefe"
+                                            options={jefeOptions}
+                                            value={jefeOptions.find(option => option.value === jefeId)}
+                                            onChange={handleJefeChange}
+                                            isClearable
+                                            placeholder="Seleccione..."
                                         />
                                     </div>
-                                    <div className="form-group">
-                                        <label htmlFor="editEstatus">Estatus</label>
-                                        <select className="form-control" id="editEstatus" value={estatusId} onChange={(e) => setEstatusId(e.target.value)}>
-                                            <option value="">Seleccione...</option>
-                                            {estatus.map(status => (
-                                                <option key={status.id} value={status.id}>{status.nombre}</option>
-                                            ))}
-                                        </select>
+                                    <div className="form-row">
+                                        <div className="form-group col-md-4">
+                                            <label htmlFor="editFechaRequisicion">Fecha de Requisición</label>
+                                            <input 
+                                                type="date" 
+                                                className="form-control" 
+                                                id="editFechaRequisicion" 
+                                                value={fechaRequisicion} 
+                                                onChange={(e) => setFechaRequisicion(e.target.value)} 
+                                            />
+                                        </div>
+                                        <div className="form-group col-md-4">
+                                            <label htmlFor="editFechaSeleccion">Fecha de Selección</label>
+                                            <input 
+                                                type="date" 
+                                                className="form-control" 
+                                                id="editFechaSeleccion" 
+                                                value={fechaSeleccion} 
+                                                onChange={(e) => setFechaSeleccion(e.target.value)} 
+                                            />
+                                        </div>
+                                        <div className="form-group col-md-4">
+                                            <label htmlFor="editFechaIngreso">Fecha de Ingreso</label>
+                                            <input 
+                                                type="date" 
+                                                className="form-control" 
+                                                id="editFechaIngreso" 
+                                                value={fechaIngreso} 
+                                                onChange={(e) => setFechaIngreso(e.target.value)} 
+                                            />
+                                        </div>
                                     </div>
                                     <div className="form-group">
                                         <label htmlFor="editComentarios">Comentarios</label>
@@ -689,6 +877,7 @@ function Vacantes() {
                     </div>
                 </div>
             )}
+
         </div>
     );
 }

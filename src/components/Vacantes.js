@@ -16,6 +16,7 @@ function Vacantes() {
     const [analistas, setAnalistas] = useState([]);
     const [comentarios, setComentarios] = useState('');
     const [comentariosFijos, setComentariosFijos] = useState('');
+    const [comentariosExistentes, setComentariosExistentes] = useState('');
     const [vacanteId, setVacanteId] = useState('');
     const [areaId, setAreaId] = useState('');
     const [analistaId, setAnalistaId] = useState('');
@@ -27,12 +28,13 @@ function Vacantes() {
     const [jefeId, setJefesId] = useState('');
     const [jefeNombre, setJefeNombre] = useState('');
     const [fechaRequisicion, setFechaRequisicion] = useState('');
-    const [fechaSeleccion, setFechaSeleccion] = useState(''); // Nuevo estado para la fecha de requisición
+    const [fechaSeleccion, setFechaSeleccion] = useState('');
     const [fechaIngreso, setFechaIngreso] = useState('');
     const [error, setError] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showTable, setShowTable] = useState(false);
+    const [showHistoryModal, setShowHistoryModal] = useState(false); // Estado para mostrar el modal de historia
     const [selectedVacante, setSelectedVacante] = useState(null);
     const [currentPage, setCurrentPage] = useState(0);
     const [nombre, setNombre] = useState('');
@@ -40,7 +42,8 @@ function Vacantes() {
     const [searchTerm, setSearchTerm] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    const [shouldFilter, setShouldFilter] = useState(true); // Nuevo estado
+    const [shouldFilter, setShouldFilter] = useState(true);
+    const [historyLog, setHistoryLog] = useState([]); // Estado para almacenar el log de historia
 
     const itemsPerPage = 10;
 
@@ -58,8 +61,7 @@ function Vacantes() {
 
     useEffect(() => {
         const quer = getQueryVariable('id');
-        //const quer = '66638a0207a53';
-        console.log("Query variable 'id':", quer); // Depuración
+        console.log("Query variable 'id':", quer);
         if (quer !== false) {
             usuario_con(quer);
         } else {
@@ -79,24 +81,22 @@ function Vacantes() {
                 'Accept': 'application/json'
             })
         };
-        console.log("Request info:", requestInfo); // Depuración
+        console.log("Request info:", requestInfo);
         fetch('https://diniz.com.mx/diniz/servicios/services/pn_sesion_con2.php', requestInfo)
             .then(response => response.json())
             .then(DatosUsuario => {
-                console.log("DatosUsuario:", DatosUsuario); // Depuración
+                console.log("DatosUsuario:", DatosUsuario);
                 if (DatosUsuario[0].usuarios.noempl !== 'x') {
                     const noempl = DatosUsuario[0].usuarios.noempl;
-                    const puesto = DatosUsuario[0].usuarios.puesto; // Obtener puesto
+                    const puesto = DatosUsuario[0].usuarios.puesto;
                     setNombre(DatosUsuario[0].usuarios.nombre);
                     setNoempl(noempl);
                     if (puesto === '' || puesto !== 'ANALISTA DE ATRACCION DE TALENTO') {
-                        // No filtrar vacantes
                         setShouldFilter(false);
                     } else {
-                        // Filtrar vacantes por noempl
                         setShouldFilter(true);
                     }
-                    fetchVacantesData(); // Llamar a fetchVacantesData después de definir el filtro
+                    fetchVacantesData();
                 } else {
                     //window.location.replace('https://diniz.com.mx');
                 }
@@ -110,9 +110,9 @@ function Vacantes() {
             .then(data => {
                 setVacantes(data);
                 if (shouldFilter) {
-                    setFilteredVacantes(data.filter(vacante => vacante.noempl === noempl)); // Filtrar vacantes por noempl
+                    setFilteredVacantes(data.filter(vacante => vacante.noempl === noempl));
                 } else {
-                    setFilteredVacantes(data); // No filtrar, mostrar todas las vacantes
+                    setFilteredVacantes(data);
                 }
             })
             .catch(error => {
@@ -152,16 +152,6 @@ function Vacantes() {
     }, []);
 
     useEffect(() => {
-        if (analistas.length > 0 && noempl) {
-            const analista = analistas.find(a => a.noempl === noempl);
-            if (analista) {
-                setAnalistaId(analista.id);
-                setAnalistaNombre(analista.nombre);
-            }
-        }
-    }, [analistas, noempl]);
-
-    useEffect(() => {
         const selectedJefe = jefes.find(jefe => jefe.id === jefeId);
         if (selectedJefe) {
             setJefeNombre(selectedJefe.nombre_completo);
@@ -169,7 +159,7 @@ function Vacantes() {
             setJefeNombre('');
         }
     }, [jefeId, jefes]);
-    
+
     useEffect(() => {
         if (noempl && vacantes.length > 0) {
             if (shouldFilter) {
@@ -273,17 +263,18 @@ function Vacantes() {
         setTipoId('');
         setJefesId('');
         setJefeNombre('');
-        setFechaRequisicion(''); // Resetear fecha de requisición
+        setFechaRequisicion('');
         setFechaSeleccion('');
         setFechaIngreso('');
         setComentarios('');
         setComentariosFijos('');
+        setComentariosExistentes('');
     };
 
     const handleSubmit = (event) => {
         event.preventDefault();
 
-        if (!vacanteId || !areaId || !analistaId || !sueldo || !estatusId || !tipoId || !jefeId || !fechaRequisicion || !fechaIngreso || !fechaSeleccion || !comentarios) {
+        if (!vacanteId || !areaId || !analistaId || !sueldo || !estatusId || !tipoId || !jefeId || !fechaRequisicion  || !comentarios) {
             let missingFields = [];
             if (!vacanteId) missingFields.push('Vacante');
             if (!areaId) missingFields.push('CEF/Área');
@@ -293,8 +284,6 @@ function Vacantes() {
             if (!tipoId) missingFields.push('Tipo');
             if (!jefeId) missingFields.push('Jefe Directo');
             if (!fechaRequisicion) missingFields.push('Fecha de Requisición');
-            if (!fechaSeleccion) missingFields.push('Fecha de Selección');
-            if (!fechaIngreso) missingFields.push('Fecha de Ingreso');
             if (!comentarios) missingFields.push('Comentarios');
 
             Swal.fire({
@@ -314,7 +303,7 @@ function Vacantes() {
             estatus_id: estatusId,
             tipo_id: tipoId,
             jefe: jefeNombre,
-            fecha_requisicion: fechaRequisicion, // Añadir fecha de requisición al objeto de datos
+            fecha_requisicion: fechaRequisicion,
             fecha_seleccion: fechaSeleccion,
             fecha_ingreso: fechaIngreso,
             comentario: comentarios,
@@ -368,28 +357,28 @@ function Vacantes() {
         setTipoId(vacante.tipo_id);
         setJefesId(vacante.jefe_id);
         setJefeNombre(vacante.nom_jefe_directo);
-        setFechaRequisicion(vacante.fecha_requisicion); // Añadir fecha de requisición al formulario de edición
+        setFechaRequisicion(vacante.fecha_requisicion);
         setFechaSeleccion(vacante.fecha_seleccion);
         setFechaIngreso(vacante.fecha_ingreso);
-        setComentarios(vacante.comentario);
-        setComentariosFijos(vacante.comentario); // Set the fixed part of the comment
+        setComentarios('');
+        setComentariosFijos('');
+        setComentariosExistentes(vacante.comentario);
         setShowEditModal(true);
     };
 
     const handleEditSubmit = (event) => {
         event.preventDefault();
 
-        if (!vacanteId || !areaId || !sueldo || !estatusId || !tipoId || !jefeId || !fechaRequisicion || !fechaSeleccion || !fechaIngreso || !comentarios) {
+        if (!vacanteId || !areaId || !analistaId || !sueldo || !estatusId || !tipoId || !jefeId || !fechaRequisicion ||  !comentarios) {
             let missingFields = [];
             if (!vacanteId) missingFields.push('Vacante');
             if (!areaId) missingFields.push('CEF/Área');
+            if (!analistaId) missingFields.push('Analista');
             if (!sueldo) missingFields.push('Sueldo');
             if (!estatusId) missingFields.push('Estatus');
             if (!tipoId) missingFields.push('Tipo');
             if (!jefeId) missingFields.push('Jefe Directo');
             if (!fechaRequisicion) missingFields.push('Fecha de Requisición');
-            if (!fechaSeleccion) missingFields.push('Fecha de Selección');
-            if (!fechaIngreso) missingFields.push('Fecha de Ingreso');
             if (!comentarios) missingFields.push('Comentarios');
 
             Swal.fire({
@@ -399,6 +388,9 @@ function Vacantes() {
             });
             return;
         }
+
+        const currentDate = new Date().toLocaleDateString();
+        const updatedComentarios = `${comentariosExistentes}\n${currentDate} - ${comentarios}`;
 
         const data = {
             id: selectedVacante.id,
@@ -410,10 +402,10 @@ function Vacantes() {
             estatus_id: estatusId,
             tipo_id: tipoId,
             jefe: jefeNombre,
-            fecha_requisicion: fechaRequisicion, // Añadir fecha de requisición al objeto de datos
+            fecha_requisicion: fechaRequisicion,
             fecha_seleccion: fechaSeleccion,
             fecha_ingreso: fechaIngreso,
-            comentario: comentarios,
+            comentario: updatedComentarios,
         };
 
         fetch('https://diniz.com.mx/diniz/servicios/services/actualiza_vacante.php', {
@@ -485,11 +477,18 @@ function Vacantes() {
         }
     };
 
-    const offset = currentPage * itemsPerPage;
-    const currentPageData = filteredVacantes.slice(offset, offset + itemsPerPage); // Usar las vacantes filtradas
-    const pageCount = Math.ceil(filteredVacantes.length / itemsPerPage); // Usar las vacantes filtradas
+    const calculateCoverageDays = (fechaRequisicion) => {
+        const today = new Date();
+        const requisitionDate = new Date(fechaRequisicion);
+        const timeDifference = today - requisitionDate;
+        const coverageDays = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+        return coverageDays < 0 ? 0 : coverageDays;
+    };
 
-    //Buscador rapido
+    const offset = currentPage * itemsPerPage;
+    const currentPageData = filteredVacantes.slice(offset, offset + itemsPerPage);
+    const pageCount = Math.ceil(filteredVacantes.length / itemsPerPage);
+
     const handleJefeChange = (selectedOption) => {
         setJefesId(selectedOption ? selectedOption.value : '');
     };
@@ -498,6 +497,24 @@ function Vacantes() {
         value: jefe.id,
         label: jefe.nombre_completo,
     }));
+
+    // Función para mostrar el modal de historia
+    const handleShowHistory = (vacante) => {
+        try {
+            const log = JSON.parse(vacante.bitacora_log.replace(/\r?\n|\r/g, ' '));
+            setHistoryLog(log);
+            setShowHistoryModal(true);
+        } catch (error) {
+            console.error('Error parsing JSON:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'El log de historia contiene datos inválidos.',
+            });
+        }
+    };
+    
+    
 
     return (
         <div>
@@ -518,7 +535,7 @@ function Vacantes() {
                         table="vacantes-table"
                         filename="vacantes"
                         sheet="Vacantes"
-                        buttonText="Exportar a Excel" // Aquí se pasa una cadena de texto
+                        buttonText="Exportar a Excel"
                     />
                 )}
             </div>
@@ -568,9 +585,11 @@ function Vacantes() {
                                 <th>Fecha de Requisición</th>
                                 <th>Fecha de Selección</th>
                                 <th>Fecha de Ingreso</th>
+                                <th>Tiempo de Cobertura (DIAS)</th>
                                 <th>Estatus</th>
                                 <th>Comentario</th>
                                 <th>Fecha de Registro</th>
+                                <th>Historia</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -587,13 +606,15 @@ function Vacantes() {
                                     <td>{vacante.fecha_requisicion}</td>
                                     <td>{vacante.fecha_seleccion}</td>
                                     <td>{vacante.fecha_ingreso}</td>
+                                    <td>{calculateCoverageDays(vacante.fecha_requisicion)}</td>
                                     <td>{vacante.nom_estatus}</td>
                                     <td>{vacante.comentario}</td>
                                     <td>{vacante.fecha_registro}</td>
+                                    <td><button className="btn btn-info" onClick={(e) => { e.stopPropagation(); handleShowHistory(vacante); }}>Ver Historia</button></td>
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan="9">No se encontraron vacantes para el analista {nombre}</td>
+                                    <td colSpan="16">No se encontraron vacantes para el analista {nombre}</td>
                                 </tr>
                             )}
                         </tbody>
@@ -779,7 +800,12 @@ function Vacantes() {
                                         </div>
                                         <div className="form-group col-md-6">
                                             <label htmlFor="editAnalista">Analista</label>
-                                            <input type="text" className="form-control" id="editAnalista" value={selectedVacante.analista} disabled />
+                                            <select className="form-control" id="editAnalista" value={analistaId} onChange={handleAnalistaChange}>
+                                                <option value="">Seleccione...</option>
+                                                {analistas.map(analista => (
+                                                    <option key={analista.id} value={analista.id}>{analista.nombre}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
                                     <div className="form-row">
@@ -857,7 +883,17 @@ function Vacantes() {
                                         </div>
                                     </div>
                                     <div className="form-group">
-                                        <label htmlFor="editComentarios">Comentarios</label>
+                                        <label htmlFor="editComentariosExistentes">Comentarios Existentes</label>
+                                        <textarea 
+                                            className="form-control" 
+                                            id="editComentariosExistentes" 
+                                            rows="3" 
+                                            value={comentariosExistentes}
+                                            disabled
+                                        ></textarea>
+                                    </div>
+                                    <div className="form-group">
+                                        <label htmlFor="editComentarios">Nuevos Comentarios</label>
                                         <textarea 
                                             className="form-control" 
                                             id="editComentarios" 
@@ -872,6 +908,35 @@ function Vacantes() {
                                         <button type="submit" className="btn btn-primary">Guardar Cambios</button>
                                     </div>
                                 </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showHistoryModal && (
+                <div className="modal fade show" tabIndex="-1" role="dialog" aria-labelledby="historyModalLabel" aria-hidden="true" style={{ display: 'block' }}>
+                    <div className="modal-dialog modal-lg" role="document">
+                        <div className="modal-content">
+                            <div className="modal-header modal-header-blue">
+                                <h5 className="modal-title" id="historyModalLabel">Historia de la Vacante</h5>
+                                <button type="button" className="close" onClick={() => { setShowHistoryModal(false); setHistoryLog([]); }}>
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div className="modal-body">
+                                <ul>
+                                    {historyLog.map((entry, index) => (
+                                        <li key={index}>
+                                            <strong>Acción:</strong> {entry.accion}<br />
+                                            <strong>Fecha:</strong> {entry.fecha}<br />
+                                            <strong>Datos:</strong> {JSON.stringify(entry.datos)}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-secondary" onClick={() => { setShowHistoryModal(false); setHistoryLog([]); }}>Cerrar</button>
                             </div>
                         </div>
                     </div>
